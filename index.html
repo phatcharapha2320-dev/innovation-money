@@ -1,0 +1,2565 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Gamified Student Wallet - กระเป๋าเงินฝึกวินัยการเงินวัยเรียน</title>
+
+  <!-- Google Fonts: Prompt & Kanit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Prompt', 'Kanit', 'sans-serif'],
+            display: ['Kanit', 'Prompt', 'sans-serif'],
+          },
+          colors: {
+            cream: '#fffdf7',
+            coin: '#fbbf24',
+            mint: '#34d399',
+            skybright: '#38bdf8',
+          },
+          boxShadow: {
+            soft: '0 8px 24px -6px rgba(251, 191, 36, 0.16), 0 4px 10px -4px rgba(15, 23, 42, 0.05)',
+            card: '0 6px 20px -4px rgba(15, 23, 42, 0.06)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Base Adaptive Full-Screen Styling & Custom Animations */
+    html, body {
+      width: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      background-color: #fffdf7;
+      font-family: 'Prompt', 'Kanit', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
+    }
+
+    /* Gentle floating animation for coins and tree mascot */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    .animate-float {
+      animation: floatSlow 3s ease-in-out infinite;
+    }
+
+    /* Pop-in animation for modals and badges */
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92) translateY(8px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Shimmer effect on progress bar */
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .progress-shimmer::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+      animation: shimmer 2.2s infinite;
+    }
+
+    /* Shake animation for incorrect PIN entry */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+    .animate-shake {
+      animation: shake 0.32s ease-in-out;
+    }
+
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #e5dec9;
+      border-radius: 9999px;
+    }
+
+    /* Safe area support for modern mobile & iPad screens */
+    .pt-safe {
+      padding-top: max(0.75rem, env(safe-area-inset-top));
+    }
+    .pb-safe {
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+  </style>
+</head>
+<body class="w-full h-[100dvh] bg-[#fffdf7] overflow-hidden">
+
+  <!-- Confetti Overlay Canvas -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Full-Viewport Adaptive App Shell (Fits Mobile, iPad, Tablet & Desktop Edge-to-Edge) -->
+  <div id="app-shell" class="w-full h-[100dvh] bg-[#fffdf7] flex flex-col relative overflow-hidden">
+
+    <!-- Top Sticky App Header & Role Switcher -->
+    <header class="sticky top-0 z-30 bg-[#fffdf7]/95 backdrop-blur-md px-4 sm:px-6 lg:px-8 pt-safe pb-3 border-b border-amber-100/80 shrink-0">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2.5">
+        <!-- Top Row: Brand & Utility Controls -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#fbbf24] to-amber-500 flex items-center justify-center text-white text-xl shadow-sm shrink-0">
+              🪙
+            </div>
+            <div>
+              <h1 class="font-display font-bold text-slate-800 text-base md:text-lg leading-tight">KidCoin Wallet</h1>
+              <p class="text-[11px] md:text-xs text-slate-500 font-medium">กระเป๋าเงินฝึกวินัยการเงินวัยเรียน</p>
+            </div>
+          </div>
+
+          <!-- Utility Buttons on Mobile -->
+          <div class="flex md:hidden items-center gap-1.5">
+            <button
+              id="btn-toggle-sound-mobile"
+              onclick="toggleSound()"
+              title="เปิด/ปิดเสียงเอฟเฟกต์"
+              class="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm transition active:scale-95 border border-amber-200/60"
+            >
+              🔊
+            </button>
+            <button
+              onclick="openResetModal()"
+              class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition active:scale-95 flex items-center gap-1"
+            >
+              <span>🔄</span>
+              <span>รีเซ็ต</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Role Switcher Tabs + iPad Utility Controls -->
+        <div class="flex items-center gap-2.5">
+          <div class="grid grid-cols-2 gap-1.5 p-1 bg-amber-100/70 rounded-2xl border border-amber-200/50 flex-1 md:w-80 lg:w-96">
+            <button
+              id="tab-student"
+              onclick="switchMode('student')"
+              class="py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm bg-white text-slate-800"
+            >
+              <span>👦</span>
+              <span>โหมดนักเรียน (ลูก)</span>
+            </button>
+
+            <button
+              id="tab-parent"
+              onclick="switchMode('parent')"
+              class="relative py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-800"
+            >
+              <span>👨‍👩‍👧</span>
+              <span>โหมดผู้ปกครอง</span>
+              <span
+                id="parent-pending-badge"
+                class="hidden ml-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-rose-500 text-white rounded-full animate-pulse"
+              >
+                0
+              </span>
+            </button>
+          </div>
+
+          <!-- Utility Buttons on iPad / Desktop -->
+          <div class="hidden md:flex items-center gap-1.5">
+            <button
+              id="btn-toggle-sound-desktop"
+              onclick="toggleSound()"
+              title="เปิด/ปิดเสียงเอฟเฟกต์"
+              class="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm transition active:scale-95 border border-amber-200/60"
+            >
+              🔊
+            </button>
+            <button
+              onclick="openResetModal()"
+              class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition active:scale-95 flex items-center gap-1.5"
+            >
+              <span>🔄</span>
+              <span>รีเซ็ตข้อมูลตัวอย่าง</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Adaptive Body Layout: Left Sidebar on iPad/Desktop + Scrollable Content + Bottom Nav on Mobile -->
+    <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden relative">
+
+      <!-- iPad / Tablet / Desktop Left Navigation Sidebar -->
+      <aside id="desktop-sidebar" class="hidden md:flex md:w-64 lg:w-72 bg-amber-50/45 border-r border-amber-100/80 p-4 lg:p-5 pb-safe flex-col justify-between shrink-0 overflow-y-auto">
+        <!-- Sidebar Menus injected dynamically -->
+      </aside>
+
+      <!-- Main Dynamic Content Area -->
+      <main id="main-content" class="flex-1 min-h-0 px-4 py-4 pb-24 sm:px-6 md:p-6 lg:p-8 overflow-y-auto overscroll-contain">
+        <!-- Rendered via JavaScript -->
+      </main>
+
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar (Visible on Phone screens < 768px) -->
+    <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-amber-100 px-2 pt-1.5 pb-safe shadow-[0_-6px_20px_-6px_rgba(15,23,42,0.08)]">
+      <!-- Bottom Nav Items injected dynamically -->
+    </nav>
+
+  </div>
+
+  <!-- Custom Interactive Modal Container (Replaces alert/confirm) -->
+  <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/45 backdrop-blur-xs z-40 hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="modal-box" class="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl animate-pop">
+      <!-- Modal content injected dynamically -->
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. WEB AUDIO API SOUND ENGINE (No external audio files needed)
+    // =========================================================================
+    const SoundFX = {
+      ctx: null,
+      enabled: true,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      // Coin "ติ๊ง!" sound when approving a quest or dropping coins
+      playCoin() {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+
+          // First bright metallic chime (B5 -> E6)
+          const osc1 = this.ctx.createOscillator();
+          const gain1 = this.ctx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(987.77, now);
+          osc1.frequency.setValueAtTime(1318.51, now + 0.085);
+
+          gain1.gain.setValueAtTime(0.001, now);
+          gain1.gain.exponentialRampToValueAtTime(0.28, now + 0.015);
+          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+          osc1.connect(gain1);
+          gain1.connect(this.ctx.destination);
+          osc1.start(now);
+          osc1.stop(now + 0.56);
+
+          // Harmonic shimmer overtone
+          const osc2 = this.ctx.createOscillator();
+          const gain2 = this.ctx.createGain();
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(1975.53, now);
+          osc2.frequency.setValueAtTime(2637.02, now + 0.085);
+
+          gain2.gain.setValueAtTime(0.001, now);
+          gain2.gain.exponentialRampToValueAtTime(0.1, now + 0.015);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+          osc2.connect(gain2);
+          gain2.connect(this.ctx.destination);
+          osc2.start(now);
+          osc2.stop(now + 0.46);
+        } catch (e) {
+          console.warn('Audio playback skipped:', e);
+        }
+      },
+
+      // Celebration "เลเวลอัป!" fanfare when reaching 100% savings goal or unlocking allowance
+      playLevelUp() {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const notes = [
+            { freq: 523.25, start: 0.00, dur: 0.14 }, // C5
+            { freq: 659.25, start: 0.11, dur: 0.14 }, // E5
+            { freq: 783.99, start: 0.22, dur: 0.14 }, // G5
+            { freq: 1046.50, start: 0.34, dur: 0.26 }, // C6
+            { freq: 783.99, start: 0.56, dur: 0.14 }, // G5
+            { freq: 1046.50, start: 0.70, dur: 0.55 }  // C6 long
+          ];
+
+          notes.forEach(n => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(n.freq, now + n.start);
+
+            gain.gain.setValueAtTime(0.001, now + n.start);
+            gain.gain.exponentialRampToValueAtTime(0.24, now + n.start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + n.start);
+            osc.stop(now + n.start + n.dur + 0.02);
+          });
+        } catch (e) {
+          console.warn('Audio playback skipped:', e);
+        }
+      },
+
+      // Soft UI pop feedback
+      playPop() {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(420, now);
+          osc.frequency.exponentialRampToValueAtTime(620, now + 0.06);
+
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } catch (e) {}
+      }
+    };
+
+    function toggleSound() {
+      SoundFX.enabled = !SoundFX.enabled;
+      const icon = SoundFX.enabled ? '🔊' : '🔇';
+      const btnMobile = document.getElementById('btn-toggle-sound-mobile');
+      const btnDesktop = document.getElementById('btn-toggle-sound-desktop');
+      if (btnMobile) btnMobile.textContent = icon;
+      if (btnDesktop) btnDesktop.textContent = icon;
+      if (SoundFX.enabled) SoundFX.playPop();
+      showToast(SoundFX.enabled ? 'เปิดเสียงเอฟเฟกต์แล้ว' : 'ปิดเสียงเอฟเฟกต์แล้ว', 'info');
+    }
+
+    // =========================================================================
+    // 2. APPLICATION STATE & LOCALSTORAGE PERSISTENCE
+    // =========================================================================
+    const STORAGE_KEY = 'gamified_student_wallet_v1';
+
+    function getDefaultState() {
+      return {
+        currentMode: 'student', // 'student' | 'parent'
+        studentTab: 'overview', // 'overview' | 'goal' | 'quests' | 'history'
+        parentTab: 'approvals', // 'approvals' | 'quests' | 'bonus' | 'history'
+        parentPin: '1234', // รหัสผ่าน 4 หลักสำหรับเข้าโหมดผู้ปกครอง
+        parentPinEnabled: true, // เปิดใช้งานการล็อกรหัสผ่านผู้ปกครอง
+        studentName: 'น้องต้นกล้า',
+        studentEmoji: '👦',
+        studentAvatar: '', // รูปโปรไฟล์นักเรียน (Data URL)
+        parentName: 'คุณแม่ใจดี',
+        parentEmoji: '👩‍👧',
+        parentAvatar: '', // รูปโปรไฟล์ผู้ปกครอง (Data URL)
+        walletBalance: 40, // ยอดเงินคงเหลือปัจจุบันในกระเป๋า
+        dailyAllowance: {
+          amount: 50,
+          unlocked: false
+        },
+        goal: {
+          title: 'เก็บเงินซื้อหูฟังไร้สาย',
+          targetAmount: 500,
+          savedAmount: 180,
+          emoji: '🎧'
+        },
+        matchingBonus: {
+          bonus50Enabled: true,
+          bonus50Amount: 50,
+          bonus50Claimed: false,
+          bonus100Enabled: true,
+          bonus100Amount: 100,
+          bonus100Claimed: false
+        },
+        quests: [
+          {
+            id: 'q1',
+            title: 'อ่านหนังสือครบ 30 นาที',
+            reward: 20,
+            isMainUnlock: true,
+            status: 'pending_approval', // 'available' | 'pending_approval' | 'approved'
+            icon: '📚'
+          },
+          {
+            id: 'q2',
+            title: 'ทำการบ้านเสร็จก่อน 2 ทุ่ม',
+            reward: 15,
+            isMainUnlock: false,
+            status: 'available',
+            icon: '✏️'
+          },
+          {
+            id: 'q3',
+            title: 'ล้างจานหลังมื้อเย็น',
+            reward: 15,
+            isMainUnlock: false,
+            status: 'available',
+            icon: '🍽️'
+          },
+          {
+            id: 'q4',
+            title: 'เก็บที่นอนและจัดโต๊ะเรียน',
+            reward: 10,
+            isMainUnlock: false,
+            status: 'approved',
+            icon: '🛏️'
+          }
+        ],
+        transactions: [
+          {
+            id: 't1',
+            type: 'reward',
+            title: 'รางวัลภารกิจ: เก็บที่นอนและจัดโต๊ะเรียน',
+            amount: 10,
+            time: 'วันนี้ 07:45 น.'
+          },
+          {
+            id: 't2',
+            type: 'goal_deposit',
+            title: 'หยอดกระปุกเป้าหมาย: เก็บเงินซื้อหูฟังไร้สาย',
+            amount: -30,
+            time: 'เมื่อวาน 19:20 น.'
+          }
+        ]
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return getDefaultState();
+        const parsed = JSON.parse(raw);
+        const def = getDefaultState();
+        return {
+          ...def,
+          ...parsed,
+          dailyAllowance: { ...def.dailyAllowance, ...(parsed.dailyAllowance || {}) },
+          goal: { ...def.goal, ...(parsed.goal || {}) },
+          matchingBonus: { ...def.matchingBonus, ...(parsed.matchingBonus || {}) },
+          quests: Array.isArray(parsed.quests) ? parsed.quests : def.quests,
+          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : def.transactions
+        };
+      } catch (e) {
+        console.warn('Failed to load state from localStorage:', e);
+        return getDefaultState();
+      }
+    }
+
+    let appState = loadState();
+    let isParentAuthenticated = false;
+    let enteredPinBuffer = '';
+    let isPinModalOpen = false;
+
+    // หากเปิดระบบล็อกรหัสผ่านไว้ ให้เริ่มต้นที่โหมดนักเรียนเสมอเมื่อโหลดหน้าใหม่เพื่อความปลอดภัย
+    if (appState.parentPinEnabled && appState.currentMode === 'parent') {
+      appState.currentMode = 'student';
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.warn('Failed to save state to localStorage:', e);
+        showToast('พื้นที่จัดเก็บเต็ม รูปภาพอาจมีขนาดใหญ่เกินไป', 'warning');
+      }
+    }
+
+    function getCurrentTimeLabel() {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      return `วันนี้ ${hh}:${mm} น.`;
+    }
+
+    // HTML Escape Helper to keep user inputs safe
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Helper to render Student or Parent profile avatar (uploaded photo or fallback emoji)
+    function renderAvatarHTML(role, extraClass = 'w-10 h-10 text-xl') {
+      const isStudent = role === 'student';
+      const avatarSrc = isStudent ? appState.studentAvatar : appState.parentAvatar;
+      const fallbackEmoji = isStudent ? (appState.studentEmoji || '👦') : (appState.parentEmoji || '👩‍👧');
+
+      if (avatarSrc) {
+        return `
+          <div class="${extraClass} rounded-2xl overflow-hidden bg-white flex items-center justify-center shrink-0 border border-white/70 shadow-xs">
+            <img
+              src="${avatarSrc}"
+              alt="โปรไฟล์"
+              class="w-full h-full object-cover"
+              onerror="this.parentElement.innerHTML='${escapeHTML(fallbackEmoji)}'"
+            />
+          </div>
+        `;
+      }
+
+      return `
+        <div class="${extraClass} rounded-2xl bg-white/90 flex items-center justify-center shrink-0 shadow-xs">
+          <span>${escapeHTML(fallbackEmoji)}</span>
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 3. UI HELPERS: TOASTS, MODALS & CONFETTI
+    // =========================================================================
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const styles = {
+        success: 'bg-emerald-600 text-white border-emerald-500',
+        coin: 'bg-amber-500 text-slate-950 border-amber-400',
+        warning: 'bg-rose-500 text-white border-rose-400',
+        info: 'bg-slate-800 text-white border-slate-700'
+      };
+      const icons = {
+        success: '✨',
+        coin: '🪙',
+        warning: '⚠️',
+        info: '💡'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-3 rounded-2xl shadow-lg border text-xs sm:text-sm font-semibold flex items-center gap-2.5 animate-pop ${styles[type] || styles.info}`;
+      toast.innerHTML = `<span class="text-base shrink-0">${icons[type] || '✨'}</span><span>${escapeHTML(message)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-6px)';
+        toast.style.transition = 'all 0.25s ease';
+        setTimeout(() => toast.remove(), 260);
+      }, 2800);
+    }
+
+    function openModal(htmlContent) {
+      const backdrop = document.getElementById('modal-backdrop');
+      const box = document.getElementById('modal-box');
+      if (!backdrop || !box) return;
+      box.innerHTML = htmlContent;
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById('modal-backdrop');
+      isPinModalOpen = false;
+      enteredPinBuffer = '';
+      if (!backdrop) return;
+      backdrop.classList.add('hidden');
+      backdrop.classList.remove('flex');
+    }
+
+    function openResetModal() {
+      SoundFX.playPop();
+      openModal(`
+        <div class="space-y-4 text-center">
+          <div class="w-14 h-14 rounded-3xl bg-amber-100 text-amber-600 text-3xl flex items-center justify-center mx-auto">
+            🔄
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-lg text-slate-800">รีเซ็ตข้อมูลตัวอย่าง?</h3>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              ข้อมูลยอดเงิน ภารกิจ เป้าหมายการออม และโปรไฟล์ทั้งหมดจะถูกคืนค่าเริ่มต้นสำหรับเริ่มสาธิตใหม่
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              onclick="closeModal()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              onclick="confirmResetData()"
+              class="py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm shadow-sm transition"
+            >
+              ยืนยันรีเซ็ต
+            </button>
+          </div>
+        </div>
+      `);
+    }
+
+    function confirmResetData() {
+      localStorage.removeItem(STORAGE_KEY);
+      appState = getDefaultState();
+      isParentAuthenticated = false;
+      saveState();
+      closeModal();
+      SoundFX.playPop();
+      renderApp();
+      showToast('รีเซ็ตข้อมูลตัวอย่างเรียบร้อยแล้ว!', 'info');
+    }
+
+    // Celebratory Confetti Effect
+    function launchConfetti() {
+      const canvas = document.getElementById('confetti-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ['#fbbf24', '#34d399', '#38bdf8', '#f472b6', '#a78bfa'];
+      const particles = Array.from({ length: 75 }, () => ({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * 120,
+        size: 6 + Math.random() * 6,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: (Math.random() - 0.5) * 4,
+        vy: 2.5 + Math.random() * 4,
+        rot: Math.random() * Math.PI * 2,
+        vrot: (Math.random() - 0.5) * 0.2
+      }));
+
+      let frame = 0;
+      function tick() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vrot;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+          ctx.restore();
+        });
+        frame++;
+        if (frame < 110) {
+          requestAnimationFrame(tick);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // =========================================================================
+    // 4. STUDENT ACTIONS (SUBMIT QUESTS, SAVINGS GOAL DEPOSIT & EDIT)
+    // =========================================================================
+    function submitQuest(questId) {
+      const quest = appState.quests.find(q => q.id === questId);
+      if (!quest || quest.status !== 'available') return;
+
+      quest.status = 'pending_approval';
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      showToast(`ส่งภารกิจ "${quest.title}" ให้ผู้ปกครองตรวจแล้ว!`, 'info');
+    }
+
+    function openDepositModal() {
+      SoundFX.playPop();
+      const maxBalance = appState.walletBalance;
+      const remainingToGoal = Math.max(0, appState.goal.targetAmount - appState.goal.savedAmount);
+
+      if (maxBalance <= 0) {
+        showToast('ยอดเงินในกระเป๋าไม่พอหยอดกระปุก ลองทำภารกิจเพิ่มนะ!', 'warning');
+        return;
+      }
+
+      const quickAmounts = [10, 20, 50].filter(amt => amt <= maxBalance);
+
+      openModal(`
+        <form onsubmit="handleDepositToGoal(event)" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-bold text-lg text-slate-800 flex items-center gap-2">
+              <span>🐷</span>
+              <span>หยอดกระปุกเป้าหมาย</span>
+            </h3>
+            <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">✕</button>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-between">
+            <div>
+              <p class="text-xs text-emerald-700 font-medium">เงินในกระเป๋าที่ใช้ได้</p>
+              <p class="font-display font-bold text-xl text-emerald-900">${maxBalance.toLocaleString()} บาท</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-slate-500">ขาดอีก</p>
+              <p class="font-display font-bold text-base text-slate-700">${remainingToGoal.toLocaleString()} บาท</p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">ระบุจำนวนเงินที่ต้องการออม (บาท)</label>
+            <input
+              id="deposit-amount-input"
+              type="number"
+              min="1"
+              max="${maxBalance}"
+              required
+              value="${Math.min(20, maxBalance)}"
+              class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-emerald-400 focus:outline-none text-lg font-bold text-slate-800"
+            />
+          </div>
+
+          <!-- Quick Amount Buttons -->
+          <div class="flex flex-wrap gap-2">
+            ${quickAmounts.map(amt => `
+              <button
+                type="button"
+                onclick="document.getElementById('deposit-amount-input').value = ${amt}; SoundFX.playPop();"
+                class="px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 text-xs font-bold transition"
+              >
+                +${amt} ฿
+              </button>
+            `).join('')}
+            <button
+              type="button"
+              onclick="document.getElementById('deposit-amount-input').value = ${maxBalance}; SoundFX.playPop();"
+              class="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-xs font-bold transition"
+            >
+              ออมทั้งหมด (${maxBalance} ฿)
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onclick="closeModal()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-[#34d399] hover:opacity-95 text-white font-bold text-sm shadow-sm transition"
+            >
+              🪙 หยอดกระปุกเลย!
+            </button>
+          </div>
+        </form>
+      `);
+    }
+
+    function handleDepositToGoal(event) {
+      event.preventDefault();
+      const input = document.getElementById('deposit-amount-input');
+      const amount = parseInt(input ? input.value : '0', 10);
+
+      if (isNaN(amount) || amount <= 0) {
+        showToast('กรุณาระบุจำนวนเงินให้ถูกต้อง', 'warning');
+        return;
+      }
+      if (amount > appState.walletBalance) {
+        showToast('ยอดเงินในกระเป๋าไม่เพียงพอ', 'warning');
+        return;
+      }
+
+      appState.walletBalance -= amount;
+      appState.goal.savedAmount += amount;
+      appState.transactions.unshift({
+        id: 't_' + Date.now(),
+        type: 'goal_deposit',
+        title: `หยอดกระปุกเป้าหมาย: ${appState.goal.title}`,
+        amount: -amount,
+        time: getCurrentTimeLabel()
+      });
+
+      // Check Parent Matching Bonus Milestones (50% and 100%)
+      const pct = (appState.goal.savedAmount / appState.goal.targetAmount) * 100;
+      let triggeredMilestone = false;
+
+      if (
+        appState.matchingBonus.bonus50Enabled &&
+        !appState.matchingBonus.bonus50Claimed &&
+        pct >= 50
+      ) {
+        const bonus50 = Number(appState.matchingBonus.bonus50Amount) || 0;
+        appState.matchingBonus.bonus50Claimed = true;
+        if (bonus50 > 0) {
+          appState.goal.savedAmount += bonus50;
+          appState.transactions.unshift({
+            id: 't_b50_' + Date.now(),
+            type: 'bonus',
+            title: `โบนัสสมทบจากผู้ปกครอง (ออมถึง 50%!)`,
+            amount: bonus50,
+            time: getCurrentTimeLabel()
+          });
+          triggeredMilestone = true;
+          setTimeout(() => {
+            showToast(`เย้! ออมถึง 50% ผู้ปกครองสมทบเพิ่ม +${bonus50} บาท!`, 'coin');
+          }, 400);
+        }
+      }
+
+      const finalPct = (appState.goal.savedAmount / appState.goal.targetAmount) * 100;
+      if (
+        appState.matchingBonus.bonus100Enabled &&
+        !appState.matchingBonus.bonus100Claimed &&
+        finalPct >= 100
+      ) {
+        const bonus100 = Number(appState.matchingBonus.bonus100Amount) || 0;
+        appState.matchingBonus.bonus100Claimed = true;
+        if (bonus100 > 0) {
+          appState.goal.savedAmount += bonus100;
+          appState.transactions.unshift({
+            id: 't_b100_' + Date.now(),
+            type: 'bonus',
+            title: `โบนัสพิชิตเป้าหมาย 100% จากผู้ปกครอง!`,
+            amount: bonus100,
+            time: getCurrentTimeLabel()
+          });
+        }
+        triggeredMilestone = true;
+        SoundFX.playLevelUp();
+        launchConfetti();
+        setTimeout(() => {
+          showToast(`🎉 ยินดีด้วย! พิชิตเป้าหมาย "${appState.goal.title}" สำเร็จ 100% แล้ว!`, 'success');
+        }, 500);
+      } else if (triggeredMilestone || finalPct >= 100) {
+        SoundFX.playLevelUp();
+        launchConfetti();
+      } else {
+        SoundFX.playCoin();
+        showToast(`หยอดกระปุกออมเงินเพิ่ม +${amount} บาท สำเร็จ!`, 'coin');
+      }
+
+      saveState();
+      closeModal();
+      renderApp();
+    }
+
+    function openEditGoalModal() {
+      SoundFX.playPop();
+      const goalEmojis = ['🎧', '🚲', '🎮', '📚', '👟', '🎸', '🎨', '🧸'];
+      openModal(`
+        <form onsubmit="handleSaveGoal(event)" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-bold text-lg text-slate-800 flex items-center gap-2">
+              <span>🎯</span>
+              <span>ตั้งเป้าหมายการออม</span>
+            </h3>
+            <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">✕</button>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">เลือกไอคอนเป้าหมาย</label>
+            <div class="grid grid-cols-8 gap-1.5">
+              ${goalEmojis.map(em => `
+                <button
+                  type="button"
+                  onclick="document.getElementById('goal-emoji-input').value = '${em}'; document.querySelectorAll('.goal-em-btn').forEach(b => b.classList.remove('ring-2','ring-sky-400','bg-sky-50')); this.classList.add('ring-2','ring-sky-400','bg-sky-50'); SoundFX.playPop();"
+                  class="goal-em-btn py-2 rounded-xl border border-slate-200 text-lg flex items-center justify-center transition ${appState.goal.emoji === em ? 'ring-2 ring-sky-400 bg-sky-50' : 'bg-white'}"
+                >
+                  ${em}
+                </button>
+              `).join('')}
+            </div>
+            <input type="hidden" id="goal-emoji-input" value="${escapeHTML(appState.goal.emoji || '🎧')}" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อเป้าหมายที่อยากได้</label>
+            <input
+              id="goal-title-input"
+              type="text"
+              required
+              maxlength="40"
+              value="${escapeHTML(appState.goal.title)}"
+              placeholder="เช่น เก็บเงินซื้อหูฟัง, จักรยานคันใหม่"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-sky-400 focus:outline-none text-sm font-semibold text-slate-800"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">จำนวนเงินเป้าหมาย (บาท)</label>
+            <input
+              id="goal-target-input"
+              type="number"
+              min="50"
+              max="100000"
+              required
+              value="${appState.goal.targetAmount}"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-sky-400 focus:outline-none text-sm font-bold text-slate-800"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onclick="closeModal()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="py-3 rounded-2xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-sm transition"
+            >
+              บันทึกเป้าหมาย
+            </button>
+          </div>
+        </form>
+      `);
+    }
+
+    function handleSaveGoal(event) {
+      event.preventDefault();
+      const title = document.getElementById('goal-title-input').value.trim();
+      const targetAmount = parseInt(document.getElementById('goal-target-input').value, 10);
+      const emoji = document.getElementById('goal-emoji-input').value || '🎯';
+
+      if (!title || isNaN(targetAmount) || targetAmount < 10) {
+        showToast('กรุณากรอกข้อมูลเป้าหมายให้ครบถ้วน', 'warning');
+        return;
+      }
+
+      appState.goal.title = title;
+      appState.goal.targetAmount = targetAmount;
+      appState.goal.emoji = emoji;
+
+      SoundFX.playPop();
+      saveState();
+      closeModal();
+      renderApp();
+      showToast('อัปเดตเป้าหมายการออมเรียบร้อยแล้ว!', 'success');
+    }
+
+    // =========================================================================
+    // 5. PARENT ACTIONS (APPROVE QUESTS, CREATE QUESTS, BONUS & ALLOWANCE)
+    // =========================================================================
+    function approveQuest(questId) {
+      const quest = appState.quests.find(q => q.id === questId);
+      if (!quest) return;
+
+      quest.status = 'approved';
+      appState.walletBalance += quest.reward;
+      appState.transactions.unshift({
+        id: 't_q_' + Date.now(),
+        type: 'reward',
+        title: `รางวัลภารกิจ: ${quest.title}`,
+        amount: quest.reward,
+        time: getCurrentTimeLabel()
+      });
+
+      let unlockedNow = false;
+      if (quest.isMainUnlock && !appState.dailyAllowance.unlocked) {
+        appState.dailyAllowance.unlocked = true;
+        const allowAmt = Number(appState.dailyAllowance.amount) || 0;
+        appState.walletBalance += allowAmt;
+        appState.transactions.unshift({
+          id: 't_alw_' + Date.now(),
+          type: 'allowance',
+          title: `ปลดล็อกค่าขนมประจำวันสำเร็จ!`,
+          amount: allowAmt,
+          time: getCurrentTimeLabel()
+        });
+        unlockedNow = true;
+      }
+
+      if (unlockedNow) {
+        SoundFX.playLevelUp();
+        launchConfetti();
+        showToast(
+          `อนุมัติแล้ว! ปลดล็อกค่าขนม +${appState.dailyAllowance.amount}฿ และรับรางวัล +${quest.reward}฿!`,
+          'success'
+        );
+      } else {
+        SoundFX.playCoin();
+        showToast(`อนุมัติภารกิจ "${quest.title}" โอนเงิน +${quest.reward}฿ เข้ากระเป๋าลูกแล้ว!`, 'coin');
+      }
+
+      saveState();
+      renderApp();
+    }
+
+    function rejectQuest(questId) {
+      const quest = appState.quests.find(q => q.id === questId);
+      if (!quest) return;
+      quest.status = 'available';
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      showToast(`ส่งภารกิจ "${quest.title}" กลับไปให้ลูกทบทวนอีกครั้ง`, 'info');
+    }
+
+    function handleCreateQuest(event) {
+      event.preventDefault();
+      const titleInput = document.getElementById('new-quest-title');
+      const rewardInput = document.getElementById('new-quest-reward');
+      const iconInput = document.getElementById('new-quest-icon');
+      const unlockCheckbox = document.getElementById('new-quest-unlock');
+
+      const title = titleInput.value.trim();
+      const reward = parseInt(rewardInput.value, 10);
+      const icon = iconInput.value || '⭐';
+      const isMainUnlock = unlockCheckbox.checked;
+
+      if (!title || isNaN(reward) || reward < 0) {
+        showToast('กรุณากรอกชื่อภารกิจและรางวัลให้ถูกต้อง', 'warning');
+        return;
+      }
+
+      appState.quests.unshift({
+        id: 'q_' + Date.now(),
+        title,
+        reward,
+        isMainUnlock,
+        status: 'available',
+        icon
+      });
+
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      showToast(`เพิ่มภารกิจใหม่ "${title}" เรียบร้อยแล้ว!`, 'success');
+    }
+
+    function deleteQuest(questId) {
+      appState.quests = appState.quests.filter(q => q.id !== questId);
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      showToast('ลบรายการภารกิจแล้ว', 'info');
+    }
+
+    function handleSaveParentSettings(event) {
+      event.preventDefault();
+      const allowAmt = parseInt(document.getElementById('setting-allowance-amount').value, 10);
+      const b50Enabled = document.getElementById('setting-b50-enabled').checked;
+      const b50Amt = parseInt(document.getElementById('setting-b50-amount').value, 10);
+      const b100Enabled = document.getElementById('setting-b100-enabled').checked;
+      const b100Amt = parseInt(document.getElementById('setting-b100-amount').value, 10);
+      const pinEnabledInput = document.getElementById('setting-parent-pin-enabled');
+      const newPinInput = document.getElementById('setting-parent-pin');
+
+      if (newPinInput && newPinInput.value.trim() !== '') {
+        const cleanPin = newPinInput.value.trim();
+        if (!/^\d{4}$/.test(cleanPin)) {
+          showToast('กรุณากรอกรหัสผ่านผู้ปกครองเป็นตัวเลข 4 หลัก', 'warning');
+          return;
+        }
+        appState.parentPin = cleanPin;
+      }
+
+      if (pinEnabledInput) {
+        appState.parentPinEnabled = pinEnabledInput.checked;
+      }
+
+      if (!isNaN(allowAmt) && allowAmt >= 0) {
+        appState.dailyAllowance.amount = allowAmt;
+      }
+      appState.matchingBonus.bonus50Enabled = b50Enabled;
+      appState.matchingBonus.bonus50Amount = isNaN(b50Amt) ? 0 : Math.max(0, b50Amt);
+      appState.matchingBonus.bonus100Enabled = b100Enabled;
+      appState.matchingBonus.bonus100Amount = isNaN(b100Amt) ? 0 : Math.max(0, b100Amt);
+
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      showToast('บันทึกการตั้งค่าและรหัสผ่านผู้ปกครองเรียบร้อยแล้ว!', 'success');
+    }
+
+    // =========================================================================
+    // 6. PROFILE EDITING (NAME & AVATAR PHOTO UPLOAD FOR STUDENT & PARENT)
+    // =========================================================================
+    let tempAvatarDataUrl = '';
+    let tempSelectedEmoji = '';
+
+    function openEditProfileModal(role) {
+      SoundFX.playPop();
+      const isStudent = role === 'student';
+      const currentName = isStudent ? appState.studentName : appState.parentName;
+      tempAvatarDataUrl = isStudent ? (appState.studentAvatar || '') : (appState.parentAvatar || '');
+      tempSelectedEmoji = isStudent ? (appState.studentEmoji || '👦') : (appState.parentEmoji || '👩‍👧');
+
+      const presetEmojis = isStudent
+        ? ['👦', '👧', '🧒', '🦊', '🐼', '🦁', '🐰', '🚀']
+        : ['👩‍👧', '👨‍👧', '👩', '👨', '🧓', '🦸‍♀️', '🦸‍♂️', '🌟'];
+
+      openModal(`
+        <form onsubmit="handleSaveProfile(event, '${role}')" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-bold text-lg text-slate-800 flex items-center gap-2">
+              <span>${isStudent ? '👦' : '👨‍👩‍👧'}</span>
+              <span>แก้ไขโปรไฟล์${isStudent ? 'นักเรียน' : 'ผู้ปกครอง'}</span>
+            </h3>
+            <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">✕</button>
+          </div>
+
+          <!-- Avatar Preview & Upload Control -->
+          <div class="flex flex-col items-center gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <div id="profile-avatar-preview" class="w-20 h-20 rounded-3xl overflow-hidden bg-white border-2 border-amber-300 shadow-sm flex items-center justify-center text-4xl">
+              ${tempAvatarDataUrl
+                ? `<img src="${tempAvatarDataUrl}" alt="ตัวอย่างรูปโปรไฟล์" class="w-full h-full object-cover" />`
+                : `<span>${escapeHTML(tempSelectedEmoji)}</span>`
+              }
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-2">
+              <label class="cursor-pointer px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-2xs transition active:scale-95 flex items-center gap-1.5">
+                <span>📷</span>
+                <span>อัปโหลดรูปโปรไฟล์</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onchange="handleProfileImageUpload(event)"
+                  class="hidden"
+                />
+              </label>
+
+              <button
+                type="button"
+                id="btn-clear-avatar"
+                onclick="clearUploadedAvatar()"
+                class="${tempAvatarDataUrl ? '' : 'hidden'} px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-semibold transition"
+              >
+                ลบรูปภาพ
+              </button>
+            </div>
+          </div>
+
+          <!-- Preset Emoji Avatars -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">หรือเลือกอวาตาร์การ์ตูน</label>
+            <div class="grid grid-cols-8 gap-1.5">
+              ${presetEmojis.map(em => `
+                <button
+                  type="button"
+                  onclick="selectProfileEmoji('${em}')"
+                  class="profile-em-btn py-2 rounded-xl border border-slate-200 text-lg flex items-center justify-center transition ${!tempAvatarDataUrl && tempSelectedEmoji === em ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-white'}"
+                >
+                  ${em}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Display Name Input -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              ชื่อ${isStudent ? 'นักเรียน' : 'ผู้ปกครอง'}
+            </label>
+            <input
+              id="profile-name-input"
+              type="text"
+              required
+              maxlength="30"
+              value="${escapeHTML(currentName)}"
+              placeholder="${isStudent ? 'เช่น น้องต้นกล้า, น้องใบบัว' : 'เช่น คุณแม่ใจดี, คุณพ่อ'}"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-amber-400 focus:outline-none text-sm font-bold text-slate-800"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onclick="closeModal()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="py-3 rounded-2xl ${isStudent ? 'bg-amber-400 hover:bg-amber-500 text-slate-900' : 'bg-sky-500 hover:bg-sky-600 text-white'} font-bold text-sm shadow-sm transition"
+            >
+              💾 บันทึกโปรไฟล์
+            </button>
+          </div>
+        </form>
+      `);
+    }
+
+    function updateProfilePreviewUI() {
+      const preview = document.getElementById('profile-avatar-preview');
+      const clearBtn = document.getElementById('btn-clear-avatar');
+      if (preview) {
+        preview.innerHTML = tempAvatarDataUrl
+          ? `<img src="${tempAvatarDataUrl}" alt="ตัวอย่างรูปโปรไฟล์" class="w-full h-full object-cover" />`
+          : `<span>${escapeHTML(tempSelectedEmoji)}</span>`;
+      }
+      if (clearBtn) {
+        if (tempAvatarDataUrl) clearBtn.classList.remove('hidden');
+        else clearBtn.classList.add('hidden');
+      }
+    }
+
+    function selectProfileEmoji(emoji) {
+      SoundFX.playPop();
+      tempAvatarDataUrl = '';
+      tempSelectedEmoji = emoji;
+      document.querySelectorAll('.profile-em-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+        if (btn.textContent.trim() === emoji) {
+          btn.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+        }
+      });
+      updateProfilePreviewUI();
+    }
+
+    function clearUploadedAvatar() {
+      SoundFX.playPop();
+      tempAvatarDataUrl = '';
+      updateProfilePreviewUI();
+    }
+
+    function handleProfileImageUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          // Resize & crop square to 180x180 JPEG so LocalStorage stays lightweight
+          const size = 180;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+
+          tempAvatarDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          SoundFX.playPop();
+          updateProfilePreviewUI();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleSaveProfile(event, role) {
+      event.preventDefault();
+      const nameInput = document.getElementById('profile-name-input');
+      const cleanName = nameInput ? nameInput.value.trim() : '';
+      if (!cleanName) {
+        showToast('กรุณากรอกชื่อโปรไฟล์', 'warning');
+        return;
+      }
+
+      if (role === 'student') {
+        appState.studentName = cleanName;
+        appState.studentEmoji = tempSelectedEmoji;
+        appState.studentAvatar = tempAvatarDataUrl;
+      } else {
+        appState.parentName = cleanName;
+        appState.parentEmoji = tempSelectedEmoji;
+        appState.parentAvatar = tempAvatarDataUrl;
+      }
+
+      SoundFX.playPop();
+      saveState();
+      closeModal();
+      renderApp();
+      showToast('บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว!', 'success');
+    }
+
+    // Open modal allowing Parent to reset or adjust Student's money
+    function openResetStudentMoneyModal() {
+      SoundFX.playPop();
+      openModal(`
+        <form onsubmit="handleResetStudentMoney(event)" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-bold text-lg text-slate-800 flex items-center gap-2">
+              <span>🔄</span>
+              <span>รีเซ็ตจำนวนเงินของ${escapeHTML(appState.studentName)}</span>
+            </h3>
+            <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">✕</button>
+          </div>
+
+          <!-- Current Balance Summary -->
+          <div class="grid grid-cols-2 gap-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200/70">
+            <div>
+              <p class="text-[11px] text-slate-500">เงินในกระเป๋าปัจจุบัน</p>
+              <p class="font-display font-bold text-base text-amber-600">${appState.walletBalance.toLocaleString()} บาท</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-500">เงินออมในเป้าหมาย</p>
+              <p class="font-display font-bold text-base text-emerald-600">${appState.goal.savedAmount.toLocaleString()} บาท</p>
+            </div>
+          </div>
+
+          <!-- New Wallet Balance Input -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              กำหนดยอดเงินในกระเป๋าใหม่ (บาท)
+            </label>
+            <div class="flex items-center gap-2">
+              <input
+                id="reset-wallet-amount"
+                type="number"
+                min="0"
+                max="100000"
+                required
+                value="0"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-sky-400 focus:outline-none text-base font-bold text-slate-800"
+              />
+              <button
+                type="button"
+                onclick="document.getElementById('reset-wallet-amount').value = 0; SoundFX.playPop();"
+                class="px-3 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold shrink-0 transition"
+              >
+                ตั้งเป็น 0 ฿
+              </button>
+            </div>
+          </div>
+
+          <!-- Additional Reset Checkboxes -->
+          <div class="space-y-2">
+            <label class="flex items-start gap-2.5 p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 cursor-pointer">
+              <input
+                id="reset-goal-savings"
+                type="checkbox"
+                class="w-4 h-4 mt-0.5 accent-emerald-600 rounded"
+              />
+              <div class="text-xs">
+                <p class="font-bold text-emerald-900">รีเซ็ตเงินออมเป้าหมายเป็น 0 บาทด้วย</p>
+                <p class="text-emerald-700/80 mt-0.5">ล้างยอดสะสมเป้าหมาย (${appState.goal.savedAmount.toLocaleString()}฿) และรีเซ็ตสิทธิ์โบนัส 50% / 100%</p>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/70 cursor-pointer">
+              <input
+                id="reset-daily-allowance-lock"
+                type="checkbox"
+                class="w-4 h-4 mt-0.5 accent-amber-500 rounded"
+              />
+              <div class="text-xs">
+                <p class="font-bold text-amber-900">ล็อกค่าขนมประจำวันใหม่ (เริ่มรอบวันใหม่)</p>
+                <p class="text-amber-800/80 mt-0.5">เปลี่ยนสถานะค่าขนมกลับเป็น 🔒 ล็อกอยู่ จนกว่าลูกจะทำภารกิจหลักสำเร็จ</p>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onclick="closeModal()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm shadow-sm transition active:scale-[0.98]"
+            >
+              🔄 ยืนยันรีเซ็ตยอดเงิน
+            </button>
+          </div>
+        </form>
+      `);
+    }
+
+    function handleResetStudentMoney(event) {
+      event.preventDefault();
+      const walletInput = document.getElementById('reset-wallet-amount');
+      const resetGoalCheck = document.getElementById('reset-goal-savings');
+      const resetAllowanceCheck = document.getElementById('reset-daily-allowance-lock');
+
+      const newWalletBalance = parseInt(walletInput ? walletInput.value : '0', 10);
+      if (isNaN(newWalletBalance) || newWalletBalance < 0) {
+        showToast('กรุณาระบุจำนวนเงินให้ถูกต้อง', 'warning');
+        return;
+      }
+
+      const prevWallet = appState.walletBalance;
+      const diff = newWalletBalance - prevWallet;
+      appState.walletBalance = newWalletBalance;
+
+      appState.transactions.unshift({
+        id: 't_reset_w_' + Date.now(),
+        type: 'goal_deposit',
+        title: `ผู้ปกครองรีเซ็ตยอดเงินกระเป๋าเป็น ${newWalletBalance.toLocaleString()} บาท`,
+        amount: diff,
+        time: getCurrentTimeLabel()
+      });
+
+      if (resetGoalCheck && resetGoalCheck.checked) {
+        const prevSaved = appState.goal.savedAmount;
+        appState.goal.savedAmount = 0;
+        appState.matchingBonus.bonus50Claimed = false;
+        appState.matchingBonus.bonus100Claimed = false;
+        if (prevSaved > 0) {
+          appState.transactions.unshift({
+            id: 't_reset_g_' + Date.now(),
+            type: 'goal_deposit',
+            title: `ผู้ปกครองรีเซ็ตยอดออมเป้าหมายเป็น 0 บาท`,
+            amount: -prevSaved,
+            time: getCurrentTimeLabel()
+          });
+        }
+      }
+
+      if (resetAllowanceCheck && resetAllowanceCheck.checked) {
+        appState.dailyAllowance.unlocked = false;
+      }
+
+      SoundFX.playPop();
+      saveState();
+      closeModal();
+      renderApp();
+      showToast(`รีเซ็ตยอดเงินของ${appState.studentName}เรียบร้อยแล้ว!`, 'info');
+    }
+
+    // =========================================================================
+    // 7. MENU DEFINITIONS & NAVIGATION SWITCHERS (WITH PARENT PIN LOCK)
+    // =========================================================================
+    function switchMode(mode) {
+      if (appState.currentMode === mode) return;
+
+      if (mode === 'student') {
+        // ล็อกโหมดผู้ปกครองอัตโนมัติเมื่อสลับกลับไปยังโหมดนักเรียน
+        isParentAuthenticated = false;
+        appState.currentMode = 'student';
+        SoundFX.playPop();
+        saveState();
+        renderApp();
+        return;
+      }
+
+      if (mode === 'parent') {
+        if (appState.parentPinEnabled && !isParentAuthenticated) {
+          openParentPinModal();
+          return;
+        }
+        appState.currentMode = 'parent';
+        SoundFX.playPop();
+        saveState();
+        renderApp();
+      }
+    }
+
+    function openParentPinModal() {
+      SoundFX.playPop();
+      enteredPinBuffer = '';
+      isPinModalOpen = true;
+
+      const digits = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+      openModal(`
+        <div id="pin-modal-container" class="space-y-4 text-center">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-full">
+              🔐 พื้นที่ผู้ปกครอง
+            </span>
+            <button type="button" onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm">✕</button>
+          </div>
+
+          <div>
+            <div class="w-14 h-14 rounded-3xl bg-sky-100 text-sky-600 text-3xl flex items-center justify-center mx-auto mb-2">
+              🛡️
+            </div>
+            <h3 class="font-display font-bold text-lg text-slate-800">กรอกรหัสผ่านผู้ปกครอง</h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              ใส่รหัส PIN 4 หลักเพื่อเข้าสู่โหมดผู้ปกครอง
+            </p>
+            <p class="inline-block mt-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-[11px] font-semibold text-amber-800">
+              💡 รหัสเริ่มต้นสำหรับทดลอง: <strong>${escapeHTML(appState.parentPin)}</strong>
+            </p>
+          </div>
+
+          <!-- 4-Digit PIN Dots -->
+          <div id="pin-dots-row" class="flex items-center justify-center gap-3.5 py-2">
+            ${[0, 1, 2, 3].map(i => `
+              <div id="pin-dot-${i}" class="w-4 h-4 rounded-full border-2 border-slate-300 bg-slate-100 transition-all duration-150"></div>
+            `).join('')}
+          </div>
+
+          <p id="pin-error-msg" class="text-xs font-bold text-rose-500 h-4"></p>
+
+          <!-- Numeric Keypad -->
+          <div class="grid grid-cols-3 gap-2.5 max-w-[260px] mx-auto pt-1">
+            ${digits.map(d => `
+              <button
+                type="button"
+                onclick="pressPinDigit('${d}')"
+                class="h-13 py-3 rounded-2xl bg-slate-50 hover:bg-sky-50 active:bg-sky-100 border border-slate-200/80 font-display font-bold text-xl text-slate-800 transition active:scale-95"
+              >
+                ${d}
+              </button>
+            `).join('')}
+            <button
+              type="button"
+              onclick="clearPin()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 font-semibold text-xs transition active:scale-95"
+            >
+              ล้างค่า
+            </button>
+            <button
+              type="button"
+              onclick="pressPinDigit('0')"
+              class="py-3 rounded-2xl bg-slate-50 hover:bg-sky-50 active:bg-sky-100 border border-slate-200/80 font-display font-bold text-xl text-slate-800 transition active:scale-95"
+            >
+              0
+            </button>
+            <button
+              type="button"
+              onclick="backspacePin()"
+              class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base transition active:scale-95"
+            >
+              ⌫
+            </button>
+          </div>
+        </div>
+      `);
+    }
+
+    function updatePinDotsUI() {
+      for (let i = 0; i < 4; i++) {
+        const dot = document.getElementById(`pin-dot-${i}`);
+        if (!dot) continue;
+        if (i < enteredPinBuffer.length) {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-sky-500 bg-sky-500 scale-110 transition-all duration-150';
+        } else {
+          dot.className = 'w-4 h-4 rounded-full border-2 border-slate-300 bg-slate-100 transition-all duration-150';
+        }
+      }
+    }
+
+    function pressPinDigit(digit) {
+      if (enteredPinBuffer.length >= 4) return;
+      SoundFX.playPop();
+      enteredPinBuffer += digit;
+      const errEl = document.getElementById('pin-error-msg');
+      if (errEl) errEl.textContent = '';
+      updatePinDotsUI();
+
+      if (enteredPinBuffer.length === 4) {
+        setTimeout(() => {
+          if (enteredPinBuffer === appState.parentPin) {
+            isParentAuthenticated = true;
+            appState.currentMode = 'parent';
+            SoundFX.playCoin();
+            closeModal();
+            saveState();
+            renderApp();
+            showToast('ยืนยันรหัสผ่านสำเร็จ! เข้าสู่โหมดผู้ปกครองแล้ว', 'success');
+          } else {
+            const container = document.getElementById('pin-modal-container');
+            const errMsg = document.getElementById('pin-error-msg');
+            if (errMsg) errMsg.textContent = '❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+            if (container) {
+              container.classList.remove('animate-shake');
+              void container.offsetWidth;
+              container.classList.add('animate-shake');
+            }
+            enteredPinBuffer = '';
+            updatePinDotsUI();
+          }
+        }, 120);
+      }
+    }
+
+    function backspacePin() {
+      if (enteredPinBuffer.length === 0) return;
+      SoundFX.playPop();
+      enteredPinBuffer = enteredPinBuffer.slice(0, -1);
+      updatePinDotsUI();
+    }
+
+    function clearPin() {
+      SoundFX.playPop();
+      enteredPinBuffer = '';
+      const errEl = document.getElementById('pin-error-msg');
+      if (errEl) errEl.textContent = '';
+      updatePinDotsUI();
+    }
+
+    function switchStudentTab(tab) {
+      appState.studentTab = tab;
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      const mainEl = document.getElementById('main-content');
+      if (mainEl) mainEl.scrollTop = 0;
+    }
+
+    function switchParentTab(tab) {
+      appState.parentTab = tab;
+      SoundFX.playPop();
+      saveState();
+      renderApp();
+      const mainEl = document.getElementById('main-content');
+      if (mainEl) mainEl.scrollTop = 0;
+    }
+
+    function getMenuItemsForCurrentMode() {
+      const pendingCount = appState.quests.filter(q => q.status === 'pending_approval').length;
+      const availableCount = appState.quests.filter(q => q.status === 'available').length;
+
+      if (appState.currentMode === 'student') {
+        return [
+          { id: 'overview', icon: '🏠', label: 'หน้าหลัก', badge: 0 },
+          { id: 'goal', icon: '🐷', label: 'เป้าหมายออมเงิน', badge: 0 },
+          { id: 'quests', icon: '⚡', label: 'ภารกิจประจำวัน', badge: availableCount },
+          { id: 'history', icon: '📜', label: 'ประวัติบัญชี', badge: 0 }
+        ];
+      } else {
+        return [
+          { id: 'approvals', icon: '✅', label: 'ตรวจภารกิจ', badge: pendingCount },
+          { id: 'quests', icon: '➕', label: 'จัดการภารกิจ', badge: 0 },
+          { id: 'bonus', icon: '🎁', label: 'โบนัส & ค่าขนม', badge: 0 },
+          { id: 'history', icon: '📊', label: 'สรุป & ประวัติ', badge: 0 }
+        ];
+      }
+    }
+
+    // =========================================================================
+    // 8. RENDER NAVIGATION (SIDEBAR ON IPAD/DESKTOP + BOTTOM BAR ON MOBILE)
+    // =========================================================================
+    function renderNavigation() {
+      const sidebar = document.getElementById('desktop-sidebar');
+      const mobileNav = document.getElementById('mobile-bottom-nav');
+      const items = getMenuItemsForCurrentMode();
+      const activeTab = appState.currentMode === 'student' ? appState.studentTab : appState.parentTab;
+      const clickFn = appState.currentMode === 'student' ? 'switchStudentTab' : 'switchParentTab';
+
+      // 1. Render iPad / Tablet Sidebar
+      if (sidebar) {
+        const isStudent = appState.currentMode === 'student';
+        const profileRole = isStudent ? 'student' : 'parent';
+        const profileName = isStudent ? appState.studentName : appState.parentName;
+        sidebar.innerHTML = `
+          <div class="space-y-4">
+            <!-- Profile / Mode Summary Card in Sidebar -->
+            <div class="p-3.5 rounded-2xl ${isStudent ? 'bg-gradient-to-br from-amber-100/90 to-amber-50 border border-amber-200/70' : 'bg-gradient-to-br from-sky-100/90 to-sky-50 border border-sky-200/70'}">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  ${renderAvatarHTML(profileRole, 'w-11 h-11 text-xl')}
+                  <div class="min-w-0">
+                    <p class="text-[11px] font-semibold ${isStudent ? 'text-amber-700' : 'text-sky-700'}">
+                      ${isStudent ? 'โปรไฟล์นักเรียน' : 'โปรไฟล์ผู้ปกครอง'}
+                    </p>
+                    <p class="font-display font-bold text-sm text-slate-800 truncate">
+                      ${escapeHTML(profileName)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onclick="openEditProfileModal('${profileRole}')"
+                  title="แก้ไขชื่อและรูปโปรไฟล์"
+                  class="p-2 rounded-xl bg-white/80 hover:bg-white text-slate-600 text-xs shadow-2xs transition shrink-0"
+                >
+                  ✏️
+                </button>
+              </div>
+              <div class="mt-3 pt-2.5 border-t border-black/5 flex items-center justify-between text-xs">
+                <span class="text-slate-500">เงินในกระเป๋าลูก:</span>
+                <span class="font-bold text-slate-800">${appState.walletBalance.toLocaleString()} ฿</span>
+              </div>
+            </div>
+
+            <!-- Menu List -->
+            <div class="space-y-1">
+              <p class="px-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                เมนู${isStudent ? 'นักเรียน' : 'ผู้ปกครอง'}
+              </p>
+              ${items.map(item => {
+                const isActive = activeTab === item.id;
+                const activeClasses = isStudent
+                  ? 'bg-amber-400 text-slate-900 font-bold shadow-xs'
+                  : 'bg-sky-500 text-white font-bold shadow-xs';
+                const inactiveClasses = 'text-slate-600 hover:bg-white/80 hover:text-slate-900 font-medium';
+                return `
+                  <button
+                    onclick="${clickFn}('${item.id}')"
+                    class="w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm transition-all ${isActive ? activeClasses : inactiveClasses}"
+                  >
+                    <span class="flex items-center gap-2.5">
+                      <span class="text-base">${item.icon}</span>
+                      <span>${item.label}</span>
+                    </span>
+                    ${item.badge > 0 ? `
+                      <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${isActive ? 'bg-white text-slate-900' : 'bg-rose-500 text-white'}">
+                        ${item.badge}
+                      </span>
+                    ` : ''}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Daily Allowance Status Pill at Bottom of Sidebar -->
+          <div class="mt-4 p-3 rounded-2xl bg-white border border-amber-100 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500 font-medium">ค่าขนมวันนี้ (${appState.dailyAllowance.amount}฿)</span>
+              <span class="font-bold ${appState.dailyAllowance.unlocked ? 'text-emerald-600' : 'text-amber-600'}">
+                ${appState.dailyAllowance.unlocked ? '🔓 ปลดล็อกแล้ว' : '🔒 ล็อกอยู่'}
+              </span>
+            </div>
+          </div>
+        `;
+      }
+
+      // 2. Render Mobile Bottom Navigation Bar
+      if (mobileNav) {
+        const isStudent = appState.currentMode === 'student';
+        mobileNav.innerHTML = `
+          <div class="grid grid-cols-4 gap-1">
+            ${items.map(item => {
+              const isActive = activeTab === item.id;
+              const activeText = isStudent ? 'text-amber-600' : 'text-sky-600';
+              const activeBg = isStudent ? 'bg-amber-100/80' : 'bg-sky-100/80';
+              return `
+                <button
+                  onclick="${clickFn}('${item.id}')"
+                  class="relative flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition active:scale-95 ${isActive ? activeText : 'text-slate-500'}"
+                >
+                  <div class="relative w-9 h-7 rounded-xl flex items-center justify-center text-base ${isActive ? activeBg : ''}">
+                    <span>${item.icon}</span>
+                    ${item.badge > 0 ? `
+                      <span class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+                        ${item.badge}
+                      </span>
+                    ` : ''}
+                  </div>
+                  <span class="text-[11px] mt-0.5 font-semibold truncate max-w-full">${item.label}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+    }
+
+    // =========================================================================
+    // 9. STUDENT VIEW RENDERERS
+    // =========================================================================
+    // Animated SVG Money Tree mascot that grows with savings percentage
+    function renderSavingsTreeSVG(percent) {
+      const clamped = Math.max(0, Math.min(100, percent));
+      const scale = 0.65 + (clamped / 100) * 0.4;
+      const showFlowers = clamped >= 50;
+      const showFruits = clamped >= 85;
+
+      return `
+        <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center animate-float shrink-0">
+          <svg viewBox="0 0 120 120" class="w-full h-full overflow-visible">
+            <!-- Soft ground shadow -->
+            <ellipse cx="60" cy="108" rx="34" ry="7" fill="#d1fae5" />
+            <!-- Cute Terracotta Pot -->
+            <path d="M40 86 L80 86 L74 107 L46 107 Z" fill="#f59e0b" />
+            <rect x="37" y="81" width="46" height="7" rx="3.5" fill="#fbbf24" />
+            <!-- Growing Tree Group -->
+            <g transform="translate(60, 82) scale(${scale.toFixed(2)}) translate(-60, -82)">
+              <!-- Trunk -->
+              <path d="M55 82 Q57 60 60 46 Q63 60 65 82 Z" fill="#92400e" />
+              <!-- Leafy Crown -->
+              <circle cx="60" cy="40" r="24" fill="#34d399" />
+              <circle cx="43" cy="47" r="16" fill="#10b981" />
+              <circle cx="77" cy="47" r="16" fill="#10b981" />
+              <circle cx="60" cy="28" r="17" fill="#6ee7b7" />
+              ${showFlowers ? `
+                <circle cx="46" cy="36" r="4" fill="#fef08a" />
+                <circle cx="74" cy="35" r="4" fill="#fef08a" />
+                <circle cx="60" cy="22" r="4" fill="#fbcfe8" />
+              ` : ''}
+              ${showFruits ? `
+                <!-- Golden Coin Fruits at >= 85% -->
+                <circle cx="49" cy="48" r="5.5" fill="#fbbf24" stroke="#fff" stroke-width="1.5" />
+                <circle cx="71" cy="48" r="5.5" fill="#fbbf24" stroke="#fff" stroke-width="1.5" />
+                <circle cx="60" cy="37" r="5.5" fill="#fbbf24" stroke="#fff" stroke-width="1.5" />
+              ` : ''}
+            </g>
+          </svg>
+        </div>
+      `;
+    }
+
+    // Reusable Student Wallet Card
+    function renderWalletBalanceCard() {
+      return `
+        <section class="bg-gradient-to-br from-[#fbbf24] via-amber-400 to-amber-500 rounded-3xl p-5 text-slate-900 shadow-soft relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/20 pointer-events-none"></div>
+          <div class="absolute right-10 -bottom-10 w-24 h-24 rounded-full bg-white/15 pointer-events-none"></div>
+
+          <div class="flex items-start justify-between gap-2 relative z-10">
+            <div class="min-w-0">
+              <button
+                onclick="openEditProfileModal('student')"
+                title="แตะเพื่อเปลี่ยนชื่อหรืออัปโหลดรูปโปรไฟล์"
+                class="inline-flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full bg-white/45 hover:bg-white/65 text-slate-900 text-xs font-semibold mb-2 transition active:scale-95 max-w-full"
+              >
+                ${renderAvatarHTML('student', 'w-6 h-6 text-sm')}
+                <span class="truncate">สวัสดี, ${escapeHTML(appState.studentName)}</span>
+                <span class="text-[11px] opacity-80 shrink-0">✏️</span>
+              </button>
+              <p class="text-xs font-medium text-amber-950/80">ยอดเงินคงเหลือในกระเป๋า</p>
+              <div class="flex items-baseline gap-1.5 mt-0.5">
+                <span class="font-display font-bold text-4xl lg:text-5xl tracking-tight text-slate-900">
+                  ${appState.walletBalance.toLocaleString()}
+                </span>
+                <span class="text-base font-bold text-amber-950">บาท</span>
+              </div>
+            </div>
+
+            <button
+              onclick="openEditProfileModal('student')"
+              title="แก้ไขโปรไฟล์นักเรียน"
+              class="shrink-0 relative group"
+            >
+              ${renderAvatarHTML('student', 'w-14 h-14 text-3xl')}
+              <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white text-slate-700 text-[11px] shadow-sm flex items-center justify-center">
+                📷
+              </span>
+            </button>
+          </div>
+
+          <!-- Daily Allowance Lock / Unlock Status Strip -->
+          <div class="mt-4 pt-3 border-t border-amber-950/10 flex items-center justify-between gap-2 relative z-10">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-2xl ${appState.dailyAllowance.unlocked ? 'bg-emerald-500 text-white' : 'bg-white/80 text-amber-800'} flex items-center justify-center text-base shrink-0 shadow-2xs">
+                ${appState.dailyAllowance.unlocked ? '🔓' : '🔒'}
+              </div>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-slate-900 truncate">
+                  ค่าขนมประจำวัน (${appState.dailyAllowance.amount} บาท)
+                </p>
+                <p class="text-[11px] font-medium ${appState.dailyAllowance.unlocked ? 'text-emerald-950' : 'text-amber-950/80'} truncate">
+                  ${appState.dailyAllowance.unlocked
+                    ? 'ปลดล็อกและโอนเข้ากระเป๋าแล้ว!'
+                    : 'ล็อกอยู่ — ทำภารกิจหลัก 🔑 ให้สำเร็จ'}
+                </p>
+              </div>
+            </div>
+
+            <span class="px-2.5 py-1 rounded-xl text-[11px] font-bold shrink-0 ${appState.dailyAllowance.unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-900/80 text-amber-300'}">
+              ${appState.dailyAllowance.unlocked ? 'รับแล้ว ✓' : '🔒 ล็อก'}
+            </span>
+          </div>
+        </section>
+      `;
+    }
+
+    // Reusable Savings Goal Card
+    function renderSavingsGoalCard() {
+      const { title, targetAmount, savedAmount, emoji } = appState.goal;
+      const rawPct = targetAmount > 0 ? Math.round((savedAmount / targetAmount) * 100) : 0;
+      const barPct = Math.min(100, Math.max(0, rawPct));
+
+      return `
+        <section class="bg-white rounded-3xl p-5 shadow-card border border-emerald-100/80 flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200/70 flex items-center justify-center text-2xl shrink-0">
+                  ${escapeHTML(emoji || '🎯')}
+                </div>
+                <div class="min-w-0">
+                  <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-wide">เป้าหมายการออม</span>
+                  <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg truncate">
+                    ${escapeHTML(title)}
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onclick="openEditGoalModal()"
+                class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition shrink-0"
+              >
+                ✏️ แก้ไข
+              </button>
+            </div>
+
+            <!-- Tree Mascot + Numbers -->
+            <div class="mt-3 flex items-center justify-between gap-3">
+              ${renderSavingsTreeSVG(barPct)}
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="font-display font-bold text-2xl text-emerald-600">
+                    ${savedAmount.toLocaleString()} ฿
+                  </span>
+                  <span class="text-xs font-semibold text-slate-400">
+                    / ${targetAmount.toLocaleString()} ฿
+                  </span>
+                </div>
+
+                <!-- Animated Progress Bar -->
+                <div class="mt-2 h-4 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
+                  <div
+                    class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-[#34d399] to-teal-400 transition-all duration-500 relative overflow-hidden progress-shimmer"
+                    style="width: ${barPct}%"
+                  ></div>
+                </div>
+
+                <div class="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
+                  <span class="text-emerald-700">ความคืบหน้า ${rawPct}%</span>
+                  <span class="text-slate-500">
+                    ${rawPct >= 100 ? '🎉 ถึงเป้าหมายแล้ว!' : `อีก ${Math.max(0, targetAmount - savedAmount).toLocaleString()} ฿`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deposit Button & Parent Bonus Hint -->
+          <div class="mt-4 pt-3 border-t border-slate-100 space-y-2.5">
+            ${(appState.matchingBonus.bonus50Enabled || appState.matchingBonus.bonus100Enabled) ? `
+              <div class="px-3 py-2 rounded-2xl bg-sky-50/80 border border-sky-100 text-[11px] text-sky-800 flex items-center gap-2">
+                <span>🎁</span>
+                <span>
+                  ผู้ปกครองสมทบเพิ่ม:
+                  ${appState.matchingBonus.bonus50Enabled ? `ถึง 50% รับ +${appState.matchingBonus.bonus50Amount}฿` : ''}
+                  ${(appState.matchingBonus.bonus50Enabled && appState.matchingBonus.bonus100Enabled) ? ' • ' : ''}
+                  ${appState.matchingBonus.bonus100Enabled ? `ถึง 100% รับ +${appState.matchingBonus.bonus100Amount}฿` : ''}
+                </span>
+              </div>
+            ` : ''}
+
+            <button
+              onclick="openDepositModal()"
+              class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-[#34d399] hover:opacity-95 text-white font-display font-bold text-sm shadow-sm transition active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <span>🐷</span>
+              <span>หยอดกระปุกเป้าหมาย</span>
+            </button>
+          </div>
+        </section>
+      `;
+    }
+
+    // Reusable Daily Quests List for Student
+    function renderStudentQuestsSection(limit = null) {
+      const questsToShow = limit ? appState.quests.slice(0, limit) : appState.quests;
+
+      return `
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
+              <span>⚡</span>
+              <span>ภารกิจประจำวัน (Daily Quests)</span>
+            </h3>
+            ${limit && appState.quests.length > limit ? `
+              <button
+                onclick="switchStudentTab('quests')"
+                class="text-xs font-bold text-amber-600 hover:text-amber-700"
+              >
+                ดูทั้งหมด (${appState.quests.length}) →
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            ${questsToShow.map(q => {
+              let actionBtn = '';
+              if (q.status === 'available') {
+                actionBtn = `
+                  <button
+                    onclick="submitQuest('${q.id}')"
+                    class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold text-xs shadow-2xs transition active:scale-95 shrink-0"
+                  >
+                    📤 ส่งภารกิจ
+                  </button>
+                `;
+              } else if (q.status === 'pending_approval') {
+                actionBtn = `
+                  <span class="px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shrink-0">
+                    ⏳ รอผู้ปกครองตรวจ
+                  </span>
+                `;
+              } else {
+                actionBtn = `
+                  <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold shrink-0">
+                    ✅ ผ่านแล้ว
+                  </span>
+                `;
+              }
+
+              return `
+                <div class="bg-white rounded-2xl p-4 shadow-card border ${q.isMainUnlock ? 'border-amber-300/80' : 'border-slate-100'} flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-11 h-11 rounded-2xl ${q.status === 'approved' ? 'bg-emerald-50' : 'bg-amber-50'} flex items-center justify-center text-2xl shrink-0">
+                      ${escapeHTML(q.icon || '⭐')}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <p class="font-semibold text-sm text-slate-800 truncate">${escapeHTML(q.title)}</p>
+                        ${q.isMainUnlock ? `
+                          <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold shrink-0">
+                            🔑 ปลดล็อกค่าขนม
+                          </span>
+                        ` : ''}
+                      </div>
+                      <p class="text-xs font-bold text-amber-600 mt-0.5">
+                        รางวัล: +${q.reward} บาท
+                      </p>
+                    </div>
+                  </div>
+                  ${actionBtn}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    // Shared Transaction History Section
+    function renderHistorySection() {
+      return `
+        <section class="space-y-3">
+          <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
+            <span>📜</span>
+            <span>ประวัติรายการเงินเข้า-ออก</span>
+          </h3>
+
+          ${appState.transactions.length === 0 ? `
+            <div class="bg-white rounded-3xl p-8 text-center text-slate-400 text-sm border border-slate-100">
+              ยังไม่มีรายการเคลื่อนไหวในบัญชี
+            </div>
+          ` : `
+            <div class="bg-white rounded-3xl divide-y divide-slate-100 shadow-card border border-slate-100 overflow-hidden">
+              ${appState.transactions.map(t => {
+                const isPositive = t.amount >= 0;
+                const badgeIcon =
+                  t.type === 'allowance' ? '🔓' :
+                  t.type === 'bonus' ? '🎁' :
+                  t.type === 'goal_deposit' ? '🐷' : '🪙';
+
+                return `
+                  <div class="p-4 flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-10 h-10 rounded-2xl ${isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-sky-50 text-sky-600'} flex items-center justify-center text-lg shrink-0">
+                        ${badgeIcon}
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs sm:text-sm font-semibold text-slate-800 truncate">${escapeHTML(t.title)}</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(t.time)}</p>
+                      </div>
+                    </div>
+                    <span class="font-display font-bold text-sm sm:text-base shrink-0 ${isPositive ? 'text-emerald-600' : 'text-sky-600'}">
+                      ${isPositive ? '+' : ''}${t.amount.toLocaleString()} ฿
+                    </span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </section>
+      `;
+    }
+
+    function renderStudentView() {
+      const tab = appState.studentTab;
+
+      if (tab === 'goal') {
+        return `
+          <div class="max-w-3xl mx-auto space-y-5">
+            ${renderSavingsGoalCard()}
+            ${renderWalletBalanceCard()}
+          </div>
+        `;
+      }
+
+      if (tab === 'quests') {
+        return `
+          <div class="max-w-5xl mx-auto space-y-5">
+            ${renderStudentQuestsSection(null)}
+          </div>
+        `;
+      }
+
+      if (tab === 'history') {
+        return `
+          <div class="max-w-3xl mx-auto space-y-5">
+            ${renderHistorySection()}
+          </div>
+        `;
+      }
+
+      // Default: 'overview'
+      return `
+        <div class="max-w-5xl mx-auto space-y-5">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 items-stretch">
+            ${renderWalletBalanceCard()}
+            ${renderSavingsGoalCard()}
+          </div>
+          ${renderStudentQuestsSection(4)}
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 10. PARENT VIEW RENDERERS
+    // =========================================================================
+    function renderParentView() {
+      const tab = appState.parentTab;
+      const pendingQuests = appState.quests.filter(q => q.status === 'pending_approval');
+
+      const summaryBanner = `
+        <section class="bg-gradient-to-r from-sky-500 to-[#38bdf8] rounded-3xl p-4 md:p-5 text-white shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3 md:gap-4 min-w-0">
+            <button
+              onclick="openEditProfileModal('parent')"
+              title="แก้ไขรูปโปรไฟล์ผู้ปกครอง"
+              class="relative shrink-0 group"
+            >
+              ${renderAvatarHTML('parent', 'w-14 h-14 md:w-16 md:h-16 text-2xl md:text-3xl')}
+              <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white text-slate-700 text-[11px] shadow-sm flex items-center justify-center">
+                📷
+              </span>
+            </button>
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] font-semibold bg-white/20 px-2.5 py-0.5 rounded-full">
+                  👨‍👩‍👧 ${escapeHTML(appState.parentName)}
+                </span>
+                <button
+                  onclick="openEditProfileModal('parent')"
+                  class="text-[11px] font-semibold bg-white/25 hover:bg-white/35 px-2.5 py-0.5 rounded-full transition active:scale-95"
+                >
+                  ✏️ แก้ไขโปรไฟล์
+                </button>
+              </div>
+              <h2 class="font-display font-bold text-base md:text-xl mt-1.5 truncate">
+                ดูแลวินัยการออมของ${escapeHTML(appState.studentName)}
+              </h2>
+              <p class="text-xs md:text-sm text-sky-100 mt-0.5">
+                กระเป๋าเงินลูก: <strong>${appState.walletBalance.toLocaleString()}฿</strong> • ออมเป้าหมาย: <strong>${appState.goal.savedAmount.toLocaleString()}/${appState.goal.targetAmount.toLocaleString()}฿</strong>
+              </p>
+            </div>
+          </div>
+
+          <button
+            onclick="openResetStudentMoneyModal()"
+            class="self-start sm:self-center px-3.5 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white border border-white/30 text-xs font-bold shadow-2xs transition active:scale-95 flex items-center gap-1.5 shrink-0"
+          >
+            <span>🔄</span>
+            <span>รีเซ็ตยอดเงินลูก</span>
+          </button>
+        </section>
+      `;
+
+      const approvalsSection = `
+        <section class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
+              <span>✅</span>
+              <span>รายการภารกิจรออนุมัติ (${pendingQuests.length})</span>
+            </h3>
+          </div>
+
+          ${pendingQuests.length === 0 ? `
+            <div class="bg-white rounded-3xl p-8 text-center border border-slate-100 shadow-card">
+              <div class="text-3xl mb-2">🎉</div>
+              <p class="font-semibold text-slate-700 text-sm">ไม่มีภารกิจค้างตรวจในขณะนี้</p>
+              <p class="text-xs text-slate-400 mt-1">เมื่อลูกกดส่งภารกิจ รายการจะมาแสดงที่นี่เพื่อให้คุณอนุมัติ</p>
+            </div>
+          ` : `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              ${pendingQuests.map(q => `
+                <div class="bg-white rounded-3xl p-4 shadow-card border-2 border-amber-300/80 flex flex-col justify-between gap-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl shrink-0">
+                      ${escapeHTML(q.icon || '⭐')}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        <h4 class="font-bold text-slate-800 text-sm">${escapeHTML(q.title)}</h4>
+                        ${q.isMainUnlock ? `
+                          <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                            🔑 ปลดล็อกค่าขนม ${appState.dailyAllowance.amount}฿
+                          </span>
+                        ` : ''}
+                      </div>
+                      <p class="text-xs text-emerald-600 font-bold mt-1">
+                        รางวัลภารกิจ: +${q.reward} บาท
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onclick="rejectQuest('${q.id}')"
+                      class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs transition"
+                    >
+                      ↩️ ส่งกลับแก้ไข
+                    </button>
+                    <button
+                      onclick="approveQuest('${q.id}')"
+                      class="py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-xs transition active:scale-95"
+                    >
+                      ✅ อนุมัติ & โอนเงิน
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </section>
+      `;
+
+      const manageQuestsSection = `
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          <!-- Add New Quest Form -->
+          <form onsubmit="handleCreateQuest(event)" class="bg-white rounded-3xl p-5 shadow-card border border-sky-100 space-y-4">
+            <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
+              <span>➕</span>
+              <span>สร้างภารกิจใหม่ให้ลูก</span>
+            </h3>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อภารกิจ</label>
+              <input
+                id="new-quest-title"
+                type="text"
+                required
+                maxlength="50"
+                placeholder="เช่น ซ้อมเปียโน 20 นาที, รดน้ำต้นไม้"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-sky-400 focus:outline-none text-sm text-slate-800"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">เงินรางวัล (บาท)</label>
+                <input
+                  id="new-quest-reward"
+                  type="number"
+                  min="1"
+                  max="5000"
+                  required
+                  value="20"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-sky-400 focus:outline-none text-sm font-bold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">ไอคอนภารกิจ</label>
+                <select
+                  id="new-quest-icon"
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-sky-400 focus:outline-none text-sm bg-white"
+                >
+                  <option value="📚">📚 อ่านหนังสือ / เรียน</option>
+                  <option value="🧹">🧹 งานบ้าน / ทำความสะอาด</option>
+                  <option value="🎹">🎹 ฝึกซ้อมดนตรี / กีฬา</option>
+                  <option value="🐶">🐶 ดูแลสัตว์เลี้ยง</option>
+                  <option value="🌱">🌱 รดน้ำต้นไม้</option>
+                  <option value="⭐">⭐ ภารกิจพิเศษ</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-50/80 border border-amber-200/70 cursor-pointer">
+              <input
+                id="new-quest-unlock"
+                type="checkbox"
+                class="w-4 h-4 accent-amber-500 rounded"
+              />
+              <span class="text-xs font-semibold text-amber-900">
+                🔑 ตั้งเป็นภารกิจหลักสำหรับปลดล็อกค่าขนมประจำวัน (${appState.dailyAllowance.amount}฿)
+              </span>
+            </label>
+
+            <button
+              type="submit"
+              class="w-full py-3 rounded-2xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-sm transition active:scale-[0.98]"
+            >
+              ➕ เพิ่มภารกิจเข้าระบบ
+            </button>
+          </form>
+
+          <!-- All Existing Quests -->
+          <div class="bg-white rounded-3xl p-5 shadow-card border border-slate-100 space-y-3">
+            <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg">
+              รายการภารกิจทั้งหมด (${appState.quests.length})
+            </h3>
+            <div class="space-y-2.5">
+              ${appState.quests.map(q => `
+                <div class="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="text-xl shrink-0">${escapeHTML(q.icon || '⭐')}</span>
+                    <div class="min-w-0">
+                      <p class="text-xs sm:text-sm font-semibold text-slate-800 truncate">${escapeHTML(q.title)}</p>
+                      <p class="text-[11px] text-slate-500">
+                        +${q.reward}฿ ${q.isMainUnlock ? '• 🔑 ปลดล็อกค่าขนม' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onclick="deleteQuest('${q.id}')"
+                    title="ลบภารกิจ"
+                    class="p-2 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 text-xs transition shrink-0"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </section>
+      `;
+
+      const bonusAndAllowanceSection = `
+        <div class="max-w-2xl mx-auto space-y-5">
+          <!-- Student Wallet Reset Card -->
+          <div class="bg-white rounded-3xl p-5 shadow-card border border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="font-display font-bold text-slate-800 text-base flex items-center gap-2">
+                <span>💼</span>
+                <span>จัดการและรีเซ็ตยอดเงินของ${escapeHTML(appState.studentName)}</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-1">
+                ยอดคงเหลือปัจจุบัน: <strong class="text-amber-600">${appState.walletBalance.toLocaleString()} บาท</strong> • เงินออมเป้าหมาย: <strong class="text-emerald-600">${appState.goal.savedAmount.toLocaleString()} บาท</strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              onclick="openResetStudentMoneyModal()"
+              class="px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs transition active:scale-95 shrink-0 flex items-center justify-center gap-1.5"
+            >
+              <span>🔄</span>
+              <span>รีเซ็ตยอดเงินลูก</span>
+            </button>
+          </div>
+
+          <form onsubmit="handleSaveParentSettings(event)" class="bg-white rounded-3xl p-5 shadow-card border border-sky-100 space-y-5">
+          <div>
+            <h3 class="font-display font-bold text-slate-800 text-base sm:text-lg flex items-center gap-2">
+              <span>🎁</span>
+              <span>ตั้งค่าค่าขนม & โบนัสสมทบเงินออม (Parent Matching Bonus)</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">
+              สร้างแรงจูงใจให้ลูกออมเงินต่อเนื่อง ด้วยโบนัสสมทบอัตโนมัติเมื่อออมถึง 50% และ 100% ของเป้าหมาย
+            </p>
+          </div>
+
+          <!-- Daily Allowance Setting -->
+          <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-2">
+            <label class="block text-xs font-bold text-amber-900">
+              🪙 ค่าขนมประจำวัน (ปลดล็อกเมื่อทำภารกิจหลักสำเร็จ)
+            </label>
+            <div class="flex items-center gap-2">
+              <input
+                id="setting-allowance-amount"
+                type="number"
+                min="0"
+                max="5000"
+                value="${appState.dailyAllowance.amount}"
+                class="w-36 px-3.5 py-2 rounded-xl border border-amber-200 bg-white text-sm font-bold text-slate-800"
+              />
+              <span class="text-xs font-semibold text-slate-600">บาท / วัน</span>
+            </div>
+          </div>
+
+          <!-- 50% Matching Bonus -->
+          <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/70 space-y-2.5">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs sm:text-sm font-bold text-emerald-900">
+                🌱 โบนัสเมื่อออมถึง 50% ของเป้าหมาย
+              </span>
+              <input
+                id="setting-b50-enabled"
+                type="checkbox"
+                ${appState.matchingBonus.bonus50Enabled ? 'checked' : ''}
+                class="w-4 h-4 accent-emerald-500"
+              />
+            </label>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-600">สมทบเพิ่ม:</span>
+              <input
+                id="setting-b50-amount"
+                type="number"
+                min="0"
+                max="10000"
+                value="${appState.matchingBonus.bonus50Amount}"
+                class="w-32 px-3 py-1.5 rounded-xl border border-emerald-200 bg-white text-sm font-bold text-slate-800"
+              />
+              <span class="text-xs font-semibold text-slate-600">บาท</span>
+              ${appState.matchingBonus.bonus50Claimed ? '<span class="text-[11px] text-emerald-600 font-bold">(รับโบนัสแล้ว ✓)</span>' : ''}
+            </div>
+          </div>
+
+          <!-- 100% Matching Bonus -->
+          <div class="p-4 rounded-2xl bg-sky-50/60 border border-sky-200/70 space-y-2.5">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs sm:text-sm font-bold text-sky-900">
+                🏆 โบนัสเมื่อออมครบ 100% ของเป้าหมาย
+              </span>
+              <input
+                id="setting-b100-enabled"
+                type="checkbox"
+                ${appState.matchingBonus.bonus100Enabled ? 'checked' : ''}
+                class="w-4 h-4 accent-sky-500"
+              />
+            </label>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-600">สมทบเพิ่ม:</span>
+              <input
+                id="setting-b100-amount"
+                type="number"
+                min="0"
+                max="10000"
+                value="${appState.matchingBonus.bonus100Amount}"
+                class="w-32 px-3 py-1.5 rounded-xl border border-sky-200 bg-white text-sm font-bold text-slate-800"
+              />
+              <span class="text-xs font-semibold text-slate-600">บาท</span>
+              ${appState.matchingBonus.bonus100Claimed ? '<span class="text-[11px] text-sky-600 font-bold">(รับโบนัสแล้ว ✓)</span>' : ''}
+            </div>
+          </div>
+
+          <!-- Parent Mode PIN Security Setting -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs sm:text-sm font-bold text-slate-800">
+                🔐 ล็อกโหมดผู้ปกครองด้วยรหัสผ่าน (PIN 4 หลัก)
+              </span>
+              <input
+                id="setting-parent-pin-enabled"
+                type="checkbox"
+                ${appState.parentPinEnabled ? 'checked' : ''}
+                class="w-4 h-4 accent-sky-500"
+              />
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xs text-slate-600">รหัสผ่านปัจจุบัน: <strong class="text-slate-800">${escapeHTML(appState.parentPin)}</strong></span>
+              <input
+                id="setting-parent-pin"
+                type="password"
+                inputmode="numeric"
+                maxlength="4"
+                placeholder="เปลี่ยนรหัส 4 หลักใหม่"
+                class="w-44 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-800 tracking-widest"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full py-3 rounded-2xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm shadow-sm transition active:scale-[0.98]"
+          >
+            💾 บันทึกการตั้งค่า
+          </button>
+          </form>
+        </div>
+      `;
+
+      if (tab === 'quests') {
+        return `<div class="max-w-5xl mx-auto space-y-5">${summaryBanner}${manageQuestsSection}</div>`;
+      }
+      if (tab === 'bonus') {
+        return `<div class="max-w-5xl mx-auto space-y-5">${summaryBanner}${bonusAndAllowanceSection}</div>`;
+      }
+      if (tab === 'history') {
+        return `<div class="max-w-3xl mx-auto space-y-5">${summaryBanner}${renderHistorySection()}</div>`;
+      }
+
+      // Default: 'approvals'
+      return `
+        <div class="max-w-5xl mx-auto space-y-5">
+          ${summaryBanner}
+          ${approvalsSection}
+        </div>
+      `;
+    }
+
+    // =========================================================================
+    // 11. MAIN RENDER ORCHESTRATOR
+    // =========================================================================
+    function renderApp() {
+      const tabStudent = document.getElementById('tab-student');
+      const tabParent = document.getElementById('tab-parent');
+      const pendingBadge = document.getElementById('parent-pending-badge');
+      const mainContent = document.getElementById('main-content');
+
+      // Update Top Role Switcher Tabs
+      const isStudent = appState.currentMode === 'student';
+      if (tabStudent && tabParent) {
+        if (isStudent) {
+          tabStudent.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm bg-white text-slate-800';
+          tabParent.className = 'relative py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-800';
+        } else {
+          tabStudent.className = 'py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-800';
+          tabParent.className = 'relative py-2 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm bg-white text-sky-700';
+        }
+      }
+
+      // Update Pending Approvals Badge
+      const pendingCount = appState.quests.filter(q => q.status === 'pending_approval').length;
+      if (pendingBadge) {
+        if (pendingCount > 0) {
+          pendingBadge.textContent = pendingCount;
+          pendingBadge.classList.remove('hidden');
+        } else {
+          pendingBadge.classList.add('hidden');
+        }
+      }
+
+      // Render Side/Bottom Navigation
+      renderNavigation();
+
+      // Render Main View Content
+      if (mainContent) {
+        mainContent.innerHTML = isStudent ? renderStudentView() : renderParentView();
+      }
+    }
+
+    // Close modal when tapping outside modal box
+    document.getElementById('modal-backdrop').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+
+    // Keyboard support for Parent PIN Keypad
+    document.addEventListener('keydown', function(e) {
+      if (!isPinModalOpen) return;
+      if (e.key >= '0' && e.key <= '9') {
+        pressPinDigit(e.key);
+      } else if (e.key === 'Backspace') {
+        backspacePin();
+      } else if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    // Initialize Application on Window Load
+    window.onload = function() {
+      renderApp();
+    };
+  </script>
+</body>
+</html>
